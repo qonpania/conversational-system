@@ -43,7 +43,7 @@ services:
     container_name: qonpania-db
     restart: unless-stopped
     ports:
-      - "0.0.0.0:3307:3306"
+      - "0.0.0.0:3308:3306"
     command:
       - "--character-set-server=utf8mb4"
       - "--collation-server=utf8mb4_unicode_ci"
