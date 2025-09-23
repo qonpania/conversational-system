@@ -1,0 +1,91 @@
+services:
+  qonpania-php:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    image: qonpania-php:dev
+    container_name: qonpania-php
+    restart: unless-stopped
+    command: >
+      sh -c "
+        if [ ! -f vendor/autoload.php ]; then
+          composer install --no-interaction --prefer-dist;
+        fi &&
+        if ! php -r 'exit((bool)env(\"APP_KEY\"));'; then
+          php artisan key:generate --force;
+        fi &&
+        php artisan storage:link || true &&
+        # En DEV puedes usar npm run dev; en PROD usa npm ci && npm run build
+        [ -f package.json ] && npm ci && npm run build || true &&
+        php-fpm
+      "
+    volumes:
+      - ./:/var/www/qonpania
+    expose:
+      - "9000"
+    depends_on:
+      qonpania-db:
+        condition: service_healthy
+      qonpania-redis:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "php -v >/dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+    networks:
+      - laravel_net       # para que lo alcance tu Nginx reverse proxy
+      - qonpania_net  # red privada interna
+
+  qonpania-db:
+    image: mysql:8.0
+    container_name: qonpania-db
+    restart: unless-stopped
+    ports:
+      - "0.0.0.0:3307:3306"
+    command:
+      - "--character-set-server=utf8mb4"
+      - "--collation-server=utf8mb4_unicode_ci"
+      - "--default-authentication-plugin=mysql_native_password"
+      - "--innodb-file-per-table=1"
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+    volumes:
+      - qonpania_db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -u${DB_USERNAME} -p${DB_PASSWORD} -h localhost --silent"]
+      interval: 20s
+      timeout: 5s
+      retries: 10
+    networks:
+      - qonpania_net
+
+  qonpania-redis:
+    image: redis:7-alpine
+    container_name: qonpania-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD}"]
+    volumes:
+      - qonpania_redis_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a ${REDIS_PASSWORD} ping | grep PONG"]
+      interval: 20s
+      timeout: 5s
+      retries: 10
+    networks:
+      - qonpania_net
+
+volumes:
+  qonpania_db_data:
+  qonpania_redis_data:
+
+networks:
+  laravel_net:
+    external: true   # ya existe en tu host (lo usa tu Nginx)
+  qonpania_net:
+    name: qonpania_net
+    driver: bridge   # red privada del proyecto
