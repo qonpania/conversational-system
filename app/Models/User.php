@@ -11,6 +11,7 @@ use Filament\Models\Contracts\HasAvatar;
 use Jeffgreco13\FilamentBreezy\Traits\TwoFactorAuthenticatable;
 use Spatie\Activitylog\Traits\CausesActivity;
 use Spatie\Activitylog\Traits\LogsActivity;
+use Filament\Panel;
 
 
 class User extends Authenticatable implements HasAvatar
@@ -48,6 +49,12 @@ class User extends Authenticatable implements HasAvatar
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function canAccessPanel(Panel $panel): bool
+    {
+        return $this->hasRole('super_admin')    // si creaste el rol con Shield
+            || $this->can('access_admin');
     }
 
     public function company()
