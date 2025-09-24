@@ -12,14 +12,12 @@ use Jeffgreco13\FilamentBreezy\Traits\TwoFactorAuthenticatable;
 use Spatie\Activitylog\Traits\CausesActivity;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Filament\Panel;
-use Filament\Models\Contracts\FilamentUser;
 
 
-
-class User extends Authenticatable implements HasAvatar
+class User extends Authenticatable implements HasAvatar, FilamentUser
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, HasRoles, TwoFactorAuthenticatable, CausesActivity, LogsActivity, FilamentUser;
+    use HasFactory, Notifiable, HasRoles, TwoFactorAuthenticatable, CausesActivity, LogsActivity;
 
     /**
      * The attributes that are mass assignable.
