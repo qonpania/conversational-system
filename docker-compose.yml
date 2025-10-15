@@ -38,27 +38,6 @@ services:
       - laravel_net       # para que lo alcance tu Nginx reverse proxy
       - qonpania_net  # red privada interna
 
-  qonpania-pg:
-    image: postgres:16
-    container_name: qonpania-pg
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${PG_DATABASE}
-      POSTGRES_USER: ${PG_USERNAME}
-      POSTGRES_PASSWORD: ${PG_PASSWORD}
-      TZ: America/Lima
-    ports:
-      - "0.0.0.0:5434:5432"   # externo opcional
-    volumes:
-      - qonpania_pg_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${PG_USERNAME} -d ${PG_DATABASE} -h 127.0.0.1"]
-      interval: 20s
-      timeout: 5s
-      retries: 10
-    networks:
-      - qonpania_net
-
   qonpania-db:
     image: mysql:8.0
     container_name: qonpania-db
@@ -103,7 +82,7 @@ services:
       - qonpania_net
 
 volumes:
-  qonpania_pg_data:
+  qonpania_db_data:
   qonpania_redis_data:
 
 networks:
