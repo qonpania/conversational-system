@@ -104,6 +104,7 @@ services:
 volumes:
   qonpania_pg_data:
   qonpania_redis_data:
+  qonpania_db_data:
 
 networks:
   laravel_net:
