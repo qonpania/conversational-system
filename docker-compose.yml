@@ -43,9 +43,9 @@ services:
     container_name: qonpania-pg
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${PG_DATABASE}
-      POSTGRES_USER: ${PG_USERNAME}
-      POSTGRES_PASSWORD: ${PG_PASSWORD}
+      POSTGRES_DB: ${DB_DATABASE}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
       TZ: America/Lima
     ports:
       - "0.0.0.0:5434:5432"   # externo opcional
