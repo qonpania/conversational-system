@@ -30,7 +30,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(\App\Services\Vector\PineconeClient::class, \App\Services\Vector\Impl\PineconeHttpClient::class);
+        $this->app->bind(\App\Services\Vector\PineconeQueryClient::class, \App\Services\Vector\Impl\PineconeQueryHttpClient::class);
+            
+        $this->app->bind(\App\Services\Extraction\Extractor::class, \App\Services\Extraction\Impl\HttpExtractor::class);
+        $this->app->bind(\App\Services\Embedding\Embedder::class,  \App\Services\Embedding\Impl\HttpEmbedder::class);
     }
 
     /**
