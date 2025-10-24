@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 
 class RagDocument extends Model
 {
-    use HasUuids;
+    use HasUuids;   
 
     protected $casts = [
         'is_active' => 'boolean',
