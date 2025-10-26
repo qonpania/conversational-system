@@ -57,6 +57,9 @@ class InboundController extends Controller
         ]);
         $conversation->messages()->save($msg);
 
+        event(new \App\Events\MessageCreated($msg));
+        \Log::info('Broadcast->MessageCreated', ['conv'=>$msg->conversation_id,'id'=>$msg->id]);
+
         // Actualiza “last_message_at”
         $conversation->update(['last_message_at' => $msg->sent_at]);
 

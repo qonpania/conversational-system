@@ -12,6 +12,8 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Support\Facades\Auth;
+use Filament\Notifications\Notification;
 
 class ConversationResource extends Resource
 {
@@ -40,6 +42,17 @@ class ConversationResource extends Resource
                 Tables\Columns\BadgeColumn::make('status')
                     ->colors(['success' => 'closed','warning' => 'snoozed','primary' => 'open'])
                     ->label('Estado'),
+
+                Tables\Columns\TextColumn::make('summary')
+                    ->label('Resumen')
+                    ->limit(80)
+                    ->tooltip(fn($record) => $record->summary)
+                    ->toggleable(),
+                Tables\Columns\TextColumn::make('summary_updated_at')
+                    ->label('Resumido')
+                    ->since()
+                    ->toggleable(isToggledHiddenByDefault: true),
+
                 Tables\Columns\TextColumn::make('last_message_at')->dateTime('Y-m-d H:i')->label('Último'),
             ])
             ->filters([
@@ -66,7 +79,37 @@ class ConversationResource extends Resource
                     }),
             ])
             ->actions([
-                Tables\Actions\ViewAction::make(), 
+                Tables\Actions\ViewAction::make(),
+
+                Tables\Actions\Action::make('takeover')
+                    ->label('Tomar (Humano)')
+                    ->icon('heroicon-o-user')
+                    ->color('warning')
+                    ->visible(fn($record) => $record->routing_mode !== 'human')
+                    ->requiresConfirmation()
+                    ->action(function($record){
+                        $record->update([
+                            'routing_mode'    => 'human',
+                            'assigned_user_id'=> Auth::id(),
+                            'handover_at'     => now(),
+                        ]);
+                        Notification::make()->title('Tomaste la conversación')->success()->send();
+                    }),
+
+                Tables\Actions\Action::make('resumeAi')
+                    ->label('Volver a IA')
+                    ->icon('heroicon-o-cpu-chip')
+                    ->color('success')
+                    ->visible(fn($record) => $record->routing_mode !== 'ai')
+                    ->requiresConfirmation()
+                    ->action(function($record){
+                        $record->update([
+                            'routing_mode'    => 'ai',
+                            'assigned_user_id'=> null,
+                            'resume_ai_at'    => now(),
+                        ]);
+                        Notification::make()->title('La IA volvió a tomar la conversación')->success()->send();
+                    }),
             ]);
     }
 

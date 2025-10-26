@@ -39,5 +39,10 @@ return [
         'base_url' => env('EMBEDDER_BASE_URL', 'http://127.0.0.1:8001'),
     ],
 
+    'n8n' => [
+        'summarize_webhook' => env('N8N_SUMMARIZE_WEBHOOK'), // setéalo en .env
+        'admin_outbound_webhook' => env('N8N_ADMIN_OUTBOUND_WEBHOOK'),
+    ],
+
 
 ];

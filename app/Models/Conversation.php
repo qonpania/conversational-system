@@ -9,15 +9,30 @@ class Conversation extends Model
 {
     use HasUuids;
     // protected $fillable = ['channel_id','contact_id','status','last_message_at','meta'];
-    protected $casts = ['last_message_at'=>'datetime','meta'=>'array'];
+    protected $casts = [
+        'last_message_at'     => 'immutable_datetime',
+        'summary_updated_at'  => 'immutable_datetime',
+        'meta'                => 'array',
+        'summary_meta'        => 'array',
+        'created_at'          => 'immutable_datetime',
+        'updated_at'          => 'immutable_datetime',
+        'handover_at'        => 'datetime',
+        'resume_ai_at'      => 'datetime'
+    ];
 
     public function channel(){
         return $this->belongsTo(Channel::class);
     }
+    
     public function contact(){
         return $this->belongsTo(Contact::class);
     }
+
     public function messages(){
         return $this->hasMany(Message::class)->orderBy('sent_at');
+    }
+
+    public function assignedUser(){
+        return $this->belongsTo(User::class, 'assigned_user_id');
     }
 }

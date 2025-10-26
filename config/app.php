@@ -123,4 +123,15 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Redirect to HTTPS
+    |--------------------------------------------------------------------------
+    |
+    | This option determines whether the application should redirect all HTTP
+    | requests to HTTPS. This is useful for ensuring secure connections.
+    | Set this to true in production environments where HTTPS is required.
+    | */
+
+    'redirect_https' => env('REDIRECT_HTTPS', false),
 ];
