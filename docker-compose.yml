@@ -101,6 +101,37 @@ services:
     networks:
       - qonpania_net
 
+  reverb:
+    image: qonpania-php:dev            # misma imagen que tu app (con PHP + código)
+    container_name: qonpania-reverb
+    command: php artisan reverb:start --host=0.0.0.0 --port=8080
+    restart: unless-stopped
+    environment:
+        APP_ENV: production
+        APP_KEY: ${APP_KEY}
+        # Servidor interno donde Laravel publicará eventos:
+        REVERB_SERVER_HOST: ${REVERB_SERVER_HOST}
+        REVERB_SERVER_PORT: ${REVERB_SERVER_PORT}
+        REVERB_SERVER_SCHEME: ${REVERB_SERVER_SCHEME}
+        # Datos públicos que usará el navegador (Nginx hace proxy /app → 127.0.0.1:8080)
+        REVERB_HOST: ${REVERB_HOST}
+        REVERB_PORT: ${REVERB_PORT}
+        REVERB_SCHEME: ${REVERB_SCHEME}
+        REVERB_PATH: ${REVERB_PATH}
+        REVERB_APP_ID: ${REVERB_APP_ID}
+        REVERB_APP_KEY: ${REVERB_APP_KEY}
+        REVERB_APP_SECRET: ${REVERB_APP_SECRET}
+    networks:
+        - default
+    expose:
+        - "8080"
+    healthcheck:
+        test: ["CMD-SHELL", "nc -z 127.0.0.1 8080 || exit 1"]
+        interval: 10s
+        timeout: 3s
+        retries: 5
+
+
 volumes:
   qonpania_pg_data:
   qonpania_redis_data:

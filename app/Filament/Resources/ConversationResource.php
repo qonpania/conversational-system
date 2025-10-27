@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Facades\Auth;
 use Filament\Notifications\Notification;
+use Filament\Tables\Actions\ActionGroup;
 
 class ConversationResource extends Resource
 {
@@ -79,37 +80,41 @@ class ConversationResource extends Resource
                     }),
             ])
             ->actions([
-                Tables\Actions\ViewAction::make(),
+                ActionGroup::make([
 
-                Tables\Actions\Action::make('takeover')
-                    ->label('Tomar (Humano)')
-                    ->icon('heroicon-o-user')
-                    ->color('warning')
-                    ->visible(fn($record) => $record->routing_mode !== 'human')
-                    ->requiresConfirmation()
-                    ->action(function($record){
-                        $record->update([
-                            'routing_mode'    => 'human',
-                            'assigned_user_id'=> Auth::id(),
-                            'handover_at'     => now(),
-                        ]);
-                        Notification::make()->title('Tomaste la conversación')->success()->send();
-                    }),
+                    Tables\Actions\ViewAction::make(),
 
-                Tables\Actions\Action::make('resumeAi')
-                    ->label('Volver a IA')
-                    ->icon('heroicon-o-cpu-chip')
-                    ->color('success')
-                    ->visible(fn($record) => $record->routing_mode !== 'ai')
-                    ->requiresConfirmation()
-                    ->action(function($record){
-                        $record->update([
-                            'routing_mode'    => 'ai',
-                            'assigned_user_id'=> null,
-                            'resume_ai_at'    => now(),
-                        ]);
-                        Notification::make()->title('La IA volvió a tomar la conversación')->success()->send();
-                    }),
+                    Tables\Actions\Action::make('takeover')
+                        ->label('Tomar (Humano)')
+                        ->icon('heroicon-o-user')
+                        ->color('warning')
+                        ->visible(fn($record) => $record->routing_mode !== 'human')
+                        ->requiresConfirmation()
+                        ->action(function($record){
+                            $record->update([
+                                'routing_mode'    => 'human',
+                                'assigned_user_id'=> Auth::id(),
+                                'handover_at'     => now(),
+                            ]);
+                            Notification::make()->title('Tomaste la conversación')->success()->send();
+                        }),
+
+                    Tables\Actions\Action::make('resumeAi')
+                        ->label('Volver a IA')
+                        ->icon('heroicon-o-cpu-chip')
+                        ->color('success')
+                        ->visible(fn($record) => $record->routing_mode !== 'ai')
+                        ->requiresConfirmation()
+                        ->action(function($record){
+                            $record->update([
+                                'routing_mode'    => 'ai',
+                                'assigned_user_id'=> null,
+                                'resume_ai_at'    => now(),
+                            ]);
+                            Notification::make()->title('La IA volvió a tomar la conversación')->success()->send();
+                        }),
+
+                    ]),
             ]);
     }
 
