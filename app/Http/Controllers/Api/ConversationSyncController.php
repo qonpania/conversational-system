@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Conversation;
 use Illuminate\Http\Request;
+use App\Events\ConversationSummaryUpdated;
 
 class ConversationSyncController extends Controller
 {
@@ -53,6 +54,13 @@ class ConversationSyncController extends Controller
             'summary_meta'       => $data['meta'] ?? [],
             'summary_updated_at' => now(),
         ])->save();
+
+        event(new ConversationSummaryUpdated(
+            conversationId: (string) $conv->id,
+            summary: $conv->summary,
+            meta: $conv->summary_meta,
+            updatedAtIso: $conv->summary_updated_at?->toIso8601String(),
+        ));
 
         return response()->json(['ok' => true, 'updated_at' => $conv->summary_updated_at?->toIso8601String()]);
     }

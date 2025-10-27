@@ -7,11 +7,17 @@
         <x-slot name="heading">Resumen</x-slot>
 
         <div class="prose max-w-none dark:prose-invert">
-            @if ($this->record->summary)
+            @if ($summaryPending)
+                {{-- Skeleton: 3 líneas animadas mientras llega el resumen --}}
+                <div class="space-y-2 animate-pulse">
+                    <div class="h-3 rounded bg-gray-200 dark:bg-gray-700 w-11/12"></div>
+                    <div class="h-3 rounded bg-gray-200 dark:bg-gray-700 w-10/12"></div>
+                    <div class="h-3 rounded bg-gray-200 dark:bg-gray-700 w-8/12"></div>
+                </div>
+            @elseif ($this->record->summary)
                 <p class="text-sm leading-relaxed whitespace-pre-line text-gray-800 dark:text-gray-100">
                     {{ $this->record->summary }}
                 </p>
-
                 <div class="text-xs mt-2 text-gray-500 dark:text-gray-400">
                     Actualizado:
                     {{ $this->record->summary_updated_at?->tz(config('app.timezone'))?->format('Y-m-d H:i') }}
@@ -25,8 +31,12 @@
         </div>
 
         <div class="mt-3">
-            <x-filament::button wire:click="regenerateSummary" icon="heroicon-o-arrow-path">
-                Regenerar resumen
+            <x-filament::button wire:click="regenerateSummary" wire:loading.attr="disabled"
+                wire:target="regenerateSummary" :disabled="$summaryPending" icon="heroicon-o-arrow-path">
+                <span wire:loading.remove wire:target="regenerateSummary">
+                    {{ $summaryPending ? 'Esperando resumen…' : 'Regenerar resumen' }}
+                </span>
+                <span wire:loading wire:target="regenerateSummary">Generando…</span>
             </x-filament::button>
         </div>
     </x-filament::section>
@@ -118,6 +128,12 @@
 
 @push('scripts')
     <script data-navigate-once>
+        document.addEventListener('alpine:init', () => {
+            Alpine.store('summary', {
+                loading: false
+            });
+        });
+
         (function() {
             const convId = @json($this->record->id);
 
@@ -181,6 +197,15 @@
                         console.log('Recibido message.created', e);
                         window.Livewire?.dispatch('realtime-message-received', {
                             id: e.id
+                        });
+                    })
+                    .listen('.summary.updated', (e) => {
+                        console.log('Recibido summary.updated', e);
+                        // Enviamos los datos del resumen a Livewire para actualizar en memoria sin recargar
+                        window.Livewire?.dispatch('summary-updated', {
+                            summary: e.summary,
+                            summary_meta: e.summary_meta,
+                            updated_at: e.updated_at
                         });
                     });
 

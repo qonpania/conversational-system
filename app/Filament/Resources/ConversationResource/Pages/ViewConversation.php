@@ -17,6 +17,8 @@ class ViewConversation extends ViewRecord
 
     protected $listeners = ['realtime-message-received' => 'refreshMessages'];
 
+    public bool $summaryPending = false;
+
     #[On('realtime-message-received')]
     public function refreshMessages(): void
     {
@@ -24,6 +26,19 @@ class ViewConversation extends ViewRecord
         $this->record->refresh();
         $this->record->load(['messages','contact','channel']);
         $this->dispatch('$refresh');
+    }
+
+    #[On('summary-updated')]
+    public function onSummaryUpdated($payload = []): void
+    {
+        // Actualiza el record en memoria (sin ir a la BD)
+        $this->record->summary = $payload['summary'] ?? $this->record->summary;
+        $this->record->summary_meta = $payload['summary_meta'] ?? $this->record->summary_meta;
+        $this->record->summary_updated_at = \Illuminate\Support\Carbon::parse($payload['updated_at'] ?? now());
+
+        $this->summaryPending = false; 
+
+        $this->dispatch('$refresh'); // re-render
     }
 
     // Debe ser público
@@ -56,6 +71,8 @@ class ViewConversation extends ViewRecord
             return;
         }
 
+        $this->summaryPending = true;
+
         try {
             Http::asJson()
                 // ->withHeaders(['X-Api-Key' => config('services.prompt_api.key')]) // opcional
@@ -78,6 +95,7 @@ class ViewConversation extends ViewRecord
                 ->body(str($e->getMessage())->limit(160))
                 ->danger()
                 ->send();
+            $this->summaryPending = false;
         }
     }
 
