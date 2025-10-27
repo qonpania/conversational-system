@@ -11,7 +11,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     default-mysql-client \
     libpq-dev \
  && docker-php-ext-configure gd --with-freetype --with-jpeg \
- && docker-php-ext-install -j"$(nproc)" intl pdo pdo_mysql pdo_pgsql mbstring exif zip gd xml soap \
+ && docker-php-ext-install -j"$(nproc)" \
+    intl pdo pdo_mysql pdo_pgsql mbstring exif zip gd xml soap pcntl \
  && pecl install redis && docker-php-ext-enable redis \
  && rm -rf /var/lib/apt/lists/*
 
