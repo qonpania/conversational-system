@@ -6,6 +6,8 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AgentPromptController;
 use App\Http\Controllers\Api\ConversationSyncController;
 use App\Http\Controllers\Api\ConversationRoutingController;
+use App\Http\Controllers\Api\MessageAnalyticsController;
+use App\Http\Controllers\Api\ConversationMetricsController;
 
 Route::post('/rag/search', [RagSearchController::class, 'search']);
 
@@ -18,7 +20,7 @@ Route::get('/agents/{slug}/prompt', [AgentPromptController::class, 'showActive']
 // });
 
 // n8n lee últimos N mensajes para resumir
-Route::get('/conversations/{id}/messages', [ConversationSyncController::class, 'messages']);
+Route::get('/conversations/{id}/messages', [ConversationSyncController::class, 'messages'])->name('api.conversation.messages');
 
 // n8n escribe/actualiza el resumen
 Route::post('/conversations/{id}/summary', [ConversationSyncController::class, 'storeSummary']);
@@ -28,3 +30,6 @@ Route::post(
     '/conversations/{id}/outbound/admin',
     [ConversationRoutingController::class, 'sendAdminMessage']
 )->name('api.conversation.admin.outbound');
+
+Route::post('/messages/{id}/analytics',     [MessageAnalyticsController::class,'store']);
+Route::post('/conversations/{id}/metrics',  [ConversationMetricsController::class,'store']);

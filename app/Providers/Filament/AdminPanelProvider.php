@@ -67,6 +67,9 @@ class AdminPanelProvider extends PanelProvider
                 Authenticate::class,
                 Locker::class,
             ])
+            ->widgets([
+                \App\Filament\Widgets\TelcoKpis::class,
+            ])
             ->plugins([
                 ActivitylogPlugin::make()
                     ->resource(\App\Filament\Resources\ActivityLogResource::class)

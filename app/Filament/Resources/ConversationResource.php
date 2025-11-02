@@ -54,6 +54,14 @@ class ConversationResource extends Resource
                     ->since()
                     ->toggleable(isToggledHiddenByDefault: true),
 
+                Tables\Columns\TextColumn::make('metrics.sentiment_overall')->label('Sent.')->badge(),
+                Tables\Columns\TextColumn::make('metrics.csat_pred')
+                  ->label('CSAT')
+                  ->formatStateUsing(fn($record) => is_null($record->metrics->csat_pred) ? '—' : (int)round($record->metrics->csat_pred*100).'%' ),
+                Tables\Columns\TextColumn::make('metrics.churn_risk')
+                  ->label('Churn')
+                  ->formatStateUsing(fn($record) => is_null($record->metrics->churn_risk) ? '—' : (int)round($record->metrics->churn_risk*100).'%' ),
+
                 Tables\Columns\TextColumn::make('last_message_at')->dateTime('Y-m-d H:i')->label('Último'),
             ])
             ->filters([
@@ -77,6 +85,14 @@ class ConversationResource extends Resource
                         return $query
                             ->when($data['from'] ?? null, fn (Builder $q, $v) => $q->whereDate('last_message_at', '>=', $v))
                             ->when($data['to'] ?? null,   fn (Builder $q, $v) => $q->whereDate('last_message_at', '<=', $v));
+                    }),
+
+                Tables\Filters\SelectFilter::make('metrics.sentiment_overall')
+                    ->label('Sentimiento')
+                    ->options(['positive'=>'Positivo','neutral'=>'Neutral','negative'=>'Negativo'])
+                    ->query(function(Builder $q, array $data) {
+                        if (!($data['value'] ?? null)) return $q;
+                        return $q->whereHas('metrics', fn($qq) => $qq->where('sentiment_overall', $data['value']));
                     }),
             ])
             ->actions([

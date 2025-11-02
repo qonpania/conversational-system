@@ -36,7 +36,7 @@ class ViewConversation extends ViewRecord
         $this->record->summary_meta = $payload['summary_meta'] ?? $this->record->summary_meta;
         $this->record->summary_updated_at = \Illuminate\Support\Carbon::parse($payload['updated_at'] ?? now());
 
-        $this->summaryPending = false; 
+        $this->summaryPending = false;
 
         $this->dispatch('$refresh'); // re-render
     }
@@ -150,7 +150,7 @@ class ViewConversation extends ViewRecord
             report($e);
             Notification::make()
                 ->title('Error enviando')
-                ->body(str($e->getMessage())->limit(160))   // o: ->body(Str::of($e->getMessage())->limit(160))
+                ->body(str($e->getMessage())->limit(160))   
                 ->danger()
                 ->send();
         }

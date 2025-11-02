@@ -23,7 +23,7 @@ class Conversation extends Model
     public function channel(){
         return $this->belongsTo(Channel::class);
     }
-    
+
     public function contact(){
         return $this->belongsTo(Contact::class);
     }
@@ -34,5 +34,9 @@ class Conversation extends Model
 
     public function assignedUser(){
         return $this->belongsTo(User::class, 'assigned_user_id');
+    }
+
+    public function metrics() {
+        return $this->hasOne(ConversationMetric::class, 'conversation_id');
     }
 }

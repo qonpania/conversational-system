@@ -21,7 +21,8 @@ use Spatie\Health\Checks\Checks\DatabaseCheck;
 use Spatie\Health\Checks\Checks\ScheduleCheck;
 use Filament\Support\Colors\Color;
 use Filament\Support\Facades\FilamentColor;
-
+use App\Observers\MessageObserver;
+use App\Models\Message;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -42,10 +43,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Message::observe(MessageObserver::class);
+
         if(config('app.redirect_https')){
             \URL::forceScheme('https');
         }
-        
+
         FilamentColor::register([
             // 'gray' => Color::Gray,
             'slate' => Color::Slate,
