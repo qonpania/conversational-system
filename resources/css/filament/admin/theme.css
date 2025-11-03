@@ -1,34 +1,4 @@
-@import '../../../../vendor/filament/filament/resources/css/theme.css';
-
 @config 'tailwind.config.js';
-
-/* @layer components {
-  .fi-body { background-color: #f8fafc !important; }
-  .dark .fi-body { background-color: #0f172a !important; }
-
-  .fi-topbar nav { background-color: #f8fafc !important; }
-  .dark .fi-topbar nav { background-color: #0f172a !important; }
-
-  .fi-sidebar,
-  .fi-sidebar-header { background-color: #f8fafc !important; }
-  .dark .fi-sidebar,
-  .dark .fi-sidebar-header { background-color: #0f172a !important; }
-
-
-  .fi-ta table { @apply bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200; }
-
-
-  .fi-ta thead th { @apply bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300; }
-
-
-  .fi-ta tbody tr:nth-child(even) td { @apply bg-slate-50 dark:bg-slate-900; }
-
-
-  .fi-ta tbody tr:hover td { @apply bg-slate-100 dark:bg-slate-800; }
-
-  .fi-ta th, .fi-ta td { @apply border-slate-200 dark:border-slate-700; }
-
-  .fi-ta .fi-input, .fi-ta .fi-select, .fi-ta .fi-pagination button {
-    @apply bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700;
-  }
-} */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\ConversationSyncController;
 use App\Http\Controllers\Api\ConversationRoutingController;
 use App\Http\Controllers\Api\MessageAnalyticsController;
 use App\Http\Controllers\Api\ConversationMetricsController;
+use App\Http\Controllers\Api\ConversationRecommendationController;
 
 Route::post('/rag/search', [RagSearchController::class, 'search']);
 
@@ -33,3 +34,5 @@ Route::post(
 
 Route::post('/messages/{id}/analytics',     [MessageAnalyticsController::class,'store']);
 Route::post('/conversations/{id}/metrics',  [ConversationMetricsController::class,'store']);
+
+Route::post('/conversations/{conversation}/recommendations', [ConversationRecommendationController::class, 'store']);

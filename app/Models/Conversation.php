@@ -17,7 +17,9 @@ class Conversation extends Model
         'created_at'          => 'immutable_datetime',
         'updated_at'          => 'immutable_datetime',
         'handover_at'        => 'datetime',
-        'resume_ai_at'      => 'datetime'
+        'resume_ai_at'      => 'datetime',
+        'recommendations_meta' => 'array',
+        'recommendations_updated_at' => 'datetime',
     ];
 
     public function channel(){

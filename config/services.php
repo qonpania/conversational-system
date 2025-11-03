@@ -43,6 +43,7 @@ return [
         'summarize_webhook' => env('N8N_SUMMARIZE_WEBHOOK'), // setéalo en .env
         'admin_outbound_webhook' => env('N8N_ADMIN_OUTBOUND_WEBHOOK'),
         'analyze_webhook' => env('N8N_ANALYZE_MESSAGE_WEBHOOK'),
+        'recommendations_webhook' => env('N8N_RECOMMENDATIONS_WEBHOOK'),
     ],
 
 
