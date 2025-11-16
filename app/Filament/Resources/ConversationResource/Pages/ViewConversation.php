@@ -9,9 +9,16 @@ use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\On;
 use Illuminate\Support\Facades\Auth;
+use Filament\Resources\Pages\Page;
+use Filament\Resources\Pages\Concerns\InteractsWithRecord;
+use Livewire\WithFileUploads;
+use Illuminate\Validation\Rules\File;
 
-class ViewConversation extends ViewRecord
+class ViewConversation extends Page
 {
+    use InteractsWithRecord;
+    use WithFileUploads;
+
     protected static string $resource = ConversationResource::class;
 
     protected static string $view = 'filament.conversations.view';
@@ -21,6 +28,39 @@ class ViewConversation extends ViewRecord
     public bool $summaryPending = false;
 
     public bool $recoPending = false;
+
+     /** Texto */
+    public string $adminText = '';
+
+    /** Subidas (arrastrar/soltar, botón clip) */
+    public array $uploads = [];           // Livewire temp files
+
+    /** Audio grabado (blob convertido a File) */
+    public $audioUpload = null;
+
+        protected function rules(): array
+    {
+        return [
+            'adminText' => ['nullable','string','max:4000'],
+            'uploads.*' => [
+                'file',
+                File::types([
+                    'jpg','jpeg','png','webp','gif',
+                    'mp4','webm','mp3','ogg','wav',
+                    'pdf','docx','xlsx','zip','txt'
+                ])->max(32 * 1024) // 32 MB
+            ],
+            'audioUpload' => [
+                'nullable','file',
+                File::types(['webm','ogg','mp3','wav'])->max(16 * 1024)
+            ],
+        ];
+    }
+
+    public function mount(int | string $record): void
+    {
+        $this->record = $this->resolveRecord($record);
+    }
 
     #[On('recommendations-updated')]
     public function onRecommendationsUpdated($payload = []): void
@@ -198,61 +238,107 @@ class ViewConversation extends ViewRecord
         }
     }
 
-    public string $adminText = '';
-
+    /** Enviar mensaje con texto + adjuntos (y opcional audio) */
     public function sendAdmin(): void
     {
-        $this->validate(['adminText' => ['required','string','max:4000']]);
-
-        $url = config('services.n8n.admin_outbound_webhook');
-        if (! $url) {
-            Notification::make()->title('Webhook n8n no configurado')->danger()->send();
+        // Evita mensajes vacíos sin archivos
+        if ($this->adminText === '' && empty($this->uploads) && !$this->audioUpload) {
+            Notification::make()->title('Nada para enviar')->danger()->send();
             return;
         }
 
-        try {
-            // 1) Dispara a n8n (con timeouts bajos para no bloquear la UI)
-            $resp = Http::asJson()
-                ->timeout(5)           // ⬅ evita esperar 30s
-                ->connectTimeout(2)
-                // ->withHeaders(['X-Api-Key' => config('services.prompt_api.key')])
-                ->post($url, [
-                    'conversation_id' => $this->record->id,
-                    'channel' => $this->record->channel->driver, // "telegram"
-                    'contact' => [
-                        'external_id' => $this->record->contact->external_id,
-                        'username'    => $this->record->contact->username,
-                        'name'        => $this->record->contact->name,
-                    ],
-                    'text' => $this->adminText,
-                ]);
+        $this->validate();
 
-            // 2) Opcional: si n8n responde con el message_id, guárdalo; si no, igual registramos el OUTBOUND local.
-            $tgMessageId = data_get($resp->json(), 'result.message_id');
+        $msg = null;
 
-            DB::transaction(function () use ($tgMessageId) {
-                $msg = $this->record->messages()->create([
-                    'direction'   => 'outbound',
-                    'type'        => 'text',
-                    'text'        => $this->adminText,
-                    'payload'     => $tgMessageId ? ['raw'=>['telegram'=>['message_id'=>$tgMessageId]]] : null,
-                    'attachments' => null,
-                    'sent_at'     => now(),
-                ]);
-                $this->record->update(['last_message_at' => $msg->sent_at]);
-            });
+        DB::transaction(function () use (&$msg) {
+            // 1) Crear mensaje base
+            $msg = $this->record->messages()->create([
+                'direction' => 'outbound',
+                'type'      => $this->resolveMessageType(),
+                'text'      => $this->adminText ?: null,
+                'sent_at'   => now(),
+            ]);
 
-            $this->adminText = '';
-            Notification::make()->title('Mensaje enviado (procesando en n8n)')->success()->send();
-            $this->dispatch('$refresh');
-        } catch (\Throwable $e) {
-            report($e);
-            Notification::make()
-                ->title('Error enviando')
-                ->body(str($e->getMessage())->limit(160))
-                ->danger()
-                ->send();
-        }
+            // 2) Adjuntar media
+            foreach ($this->uploads as $tmp) {
+                $msg->addMedia($tmp->getRealPath())
+                    ->usingFileName($tmp->getClientOriginalName())
+                    ->toMediaCollection('attachments');
+            }
+            if ($this->audioUpload) {
+                $msg->addMedia($this->audioUpload->getRealPath())
+                    ->usingFileName($this->audioUpload->getClientOriginalName() ?: 'voice.webm')
+                    ->toMediaCollection('attachments');
+            }
+            // 3) Actualizar last_message_at
+            $this->record->update(['last_message_at' => $msg->sent_at]);
+        });
+
+        // Dispara webhook n8n (opcional: pasa URLs firmadas a Telegram/WhatsApp)
+        $this->notifyOutboundViaN8n($msg);
+
+        // Limpia estado UI
+        $this->reset(['adminText','uploads','audioUpload']);
+        $this->dispatch('$refresh');
+        Notification::make()->title('Mensaje enviado')->success()->send();
     }
 
+    /** Heurística simple para “type” principal del mensaje */
+    private function resolveMessageType(): string
+    {
+        $hasFiles = count($this->uploads) > 0 || $this->audioUpload;
+        if (!$hasFiles) return 'text';
+
+        // Si hay solo audio
+        if ($this->audioUpload && count($this->uploads) === 0) return 'audio';
+
+        // Si hay al menos una imagen y nada más, lo marcamos como “image”
+        $first = $this->uploads[0] ?? $this->audioUpload;
+        $mime  = $first?->getMimeType() ?? 'application/octet-stream';
+
+        if (str_starts_with($mime, 'image/')) return 'image';
+        if (str_starts_with($mime, 'video/')) return 'video';
+        if (str_starts_with($mime, 'audio/')) return 'audio';
+
+        return 'file';
+    }
+
+    /** Envía a n8n: texto + enlaces firmados a media (para Telegram/WA) */
+    private function notifyOutboundViaN8n(\App\Models\Message $msg): void
+    {
+        $url = config('services.n8n.admin_outbound_webhook');
+        if (!$url) return;
+
+        try {
+
+            $media = $msg->getMedia('attachments');
+
+            // Crea URLs temporales públicas (si usas S3, usa temporaryUrl)
+            $files = $media->map(function ($m) {
+                return [
+                    'name' => $m->file_name,
+                    'mime' => $m->mime_type,
+                    'url'  => $m->getFullUrl(), // si disco public; con S3 usa $m->getTemporaryUrl(...)
+                ];
+            })->values()->all();
+
+            Http::asJson()->timeout(5)->connectTimeout(2)->post($url, [
+                'conversation_id' => $this->record->id,
+                'channel' => $this->record->channel->driver, // p.ej. "telegram"
+                'contact' => [
+                    'external_id' => $this->record->contact->external_id,
+                    'username'    => $this->record->contact->username,
+                    'name'        => $this->record->contact->name,
+                ],
+                'text'  => $msg->text,
+                'files' => $files, // n8n decide si manda photo/document/audio/voice
+                'message_type' => $msg->type,
+            ]);
+        } catch (\Throwable $e) {
+            report($e);
+            Notification::make()->title('Enviado local, fallo webhook n8n')
+                ->body(str($e->getMessage())->limit(140))->warning()->send();
+        }
+    }
 }

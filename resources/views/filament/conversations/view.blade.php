@@ -3,6 +3,15 @@
     use Illuminate\Support\Str;
     /** @var \App\Models\Conversation $record */
     $metrics = $this->record->metrics; // relación 1–1 ya cargada en resolveRecord()
+
+    $tips = [
+        'csat' => 'Estimación de satisfacción (0–100%). Se infiere del tono y contexto.',
+        'churn' => 'Probabilidad de baja. Útil para activar retención y priorizar casos.',
+        'fcr' => '¿Se resolvió en el primer contacto? Mide eficiencia.',
+        'aht' => 'Tiempo promedio de atención/respuesta. Clave para SLAs y capacidad.',
+        'intents' => 'Temas/motivos más frecuentes en la conversación.',
+    ];
+
 @endphp
 
 <x-filament::page>
@@ -14,7 +23,7 @@
                 <x-slot name="heading">Contacto</x-slot>
 
                 <div class="space-y-1 text-sm">
-                    <div class="font-medium">
+                    <div class="font-medium text-gray-950 dark:text-white">
                         {{ $this->record->contact->username ? '@' . $this->record->contact->username : $this->record->contact->name ?? 'Contacto' }}
                     </div>
                     <div class="text-gray-500 dark:text-gray-400">
@@ -54,7 +63,7 @@
 
                 <div x-show="!$store.summary.loading">
                     @if ($this->record->summary)
-                        <p class="text-sm leading-relaxed whitespace-pre-line text-gray-800 dark:text-gray-100">
+                        <p class="text-sm leading-relaxed text-gray-950 dark:text-white">
                             {{ $this->record->summary }}
                         </p>
                         <div class="text-xs mt-2 text-gray-500 dark:text-gray-400">
@@ -185,6 +194,14 @@
 
             {{-- Contenedor de mensajes --}}
             <div id="chatScroll"
+                x-data
+                @dragover.prevent="$el.classList.add('ring-2','ring-primary-500')"
+                @dragleave="$el.classList.remove('ring-2','ring-primary-500')"
+                @drop.prevent="
+                    $el.classList.remove('ring-2','ring-primary-500');
+                    const files = $event.dataTransfer.files;
+                    if (files?.length) $wire.uploadMultiple('uploads', files)
+                "
                 class="flex-1 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 overflow-y-auto">
                 {{-- Loader de “cargar más” arriba (paginación futura) --}}
                 <div id="loadMore" class="flex justify-center my-2">
@@ -202,31 +219,44 @@
                             class="max-w-[78%] rounded-xl px-4 py-2 shadow
                             {{ $isOutbound
                                 ? 'bg-primary-600 text-white rounded-br-none'
-                                : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-bl-none' }}">
-                            @if ($m->type === 'text')
-                                <div class="whitespace-pre-line text-[15px] leading-relaxed">
-                                    {{ $m->text }}
-                                </div>
-                            @else
-                                <div class="text-xs opacity-80 mb-1">
-                                    ({{ strtoupper($m->type) }})
-                                </div>
-
-                                @if ($m->attachments)
-                                    @foreach ($m->attachments as $aFile)
-                                        @if (Str::of($aFile['mime'] ?? '')->startsWith('image/'))
-                                            <img src="{{ $aFile['url'] ?? '' }}"
-                                                alt="{{ $aFile['filename'] ?? 'image' }}"
-                                                class="rounded-lg mt-2 border border-gray-200 dark:border-gray-700">
-                                        @else
-                                            <a href="{{ $aFile['url'] ?? '#' }}" target="_blank"
-                                                class="underline text-xs break-all text-blue-700 dark:text-blue-400">
-                                                {{ $aFile['filename'] ?? 'archivo' }} ({{ $aFile['mime'] ?? 'file' }})
-                                            </a>
-                                        @endif
-                                    @endforeach
-                                @endif
+                                : 'bg-gray-100 dark:bg-gray-800 text-gray-950 dark:text-white rounded-bl-none' }}">
+                            @if ($m->type === 'text' && $m->text)
+                              <div class="text-[15px] leading-relaxed">
+                                {{ $m->text }}
+                              </div>
                             @endif
+                            
+                            @php $medias = $m->getMedia('attachments'); @endphp
+                            
+                            @if ($medias->count())
+                              <div class="mt-2 space-y-2">
+                                @foreach ($medias as $media)
+                                  @php $mime = $media->mime_type ?? ''; @endphp
+                            
+                                  @if (Str::startsWith($mime, 'image/'))
+                                    <a href="{{ $media->getFullUrl() }}" target="_blank">
+                                      <img
+                                        src="{{ $media->hasGeneratedConversion('thumb') ? $media->getUrl('thumb') : $media->getFullUrl() }}"
+                                        alt="{{ $media->file_name }}"
+                                        class="rounded-lg border border-gray-200 dark:border-gray-700 max-w-full" />
+                                    </a>
+                            
+                                  @elseif (Str::startsWith($mime, 'video/'))
+                                    <video src="{{ $media->getFullUrl() }}" controls class="rounded-lg max-w-full border border-gray-200 dark:border-gray-700"></video>
+                            
+                                  @elseif (Str::startsWith($mime, 'audio/'))
+                                    <audio src="{{ $media->getFullUrl() }}" controls class="w-full"></audio>
+                            
+                                  @else
+                                    <a href="{{ $media->getFullUrl() }}" target="_blank"
+                                       class="underline text-xs break-all text-blue-700 dark:text-blue-400">
+                                       {{ $media->file_name }} ({{ $mime ?: 'archivo' }})
+                                    </a>
+                                  @endif
+                                @endforeach
+                              </div>
+                            @endif
+
 
                             {{-- Badges de análisis por mensaje (usa badges de Filament) --}}
                             <div class="flex items-center gap-1 mt-1">
@@ -268,18 +298,78 @@
 
             {{-- Composer (solo en modo humano) --}}
             @if ($this->record->routing_mode === 'human')
-                <form wire:submit.prevent="sendAdmin" class="mt-3">
-                    <div class="flex items-end gap-2">
-                        <textarea id="adminText" wire:model.defer="adminText" rows="2"
-                            placeholder="Escribe tu mensaje… (Ctrl+Enter envía)"
-                            class="flex-1 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                            x-on:keydown.ctrl.enter="$wire.sendAdmin()"></textarea>
-                        <x-filament::button type="submit" icon="heroicon-o-paper-airplane" class="shrink-0">
-                            Enviar
-                        </x-filament::button>
+            <form wire:submit.prevent="sendAdmin" class="mt-3"
+                  x-data="chatComposer()">
+              <div class="flex items-end gap-2">
+                <!-- Botón clip -->
+                <button type="button"
+                        class="rounded-xl border px-3 py-2 text-sm bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700"
+                        x-on:click="$refs.file.click()"
+                        x-tooltip.raw="Adjuntar archivos (imágenes, videos, audio, docs)">
+                  📎
+                </button>
+                <input x-ref="file" type="file" class="hidden" multiple
+                       accept="image/*,video/*,audio/*,.pdf,.docx,.xlsx,.zip,.txt"
+                       x-on:change="$wire.uploadMultiple('uploads', $event.target.files)" />
+
+                <!-- Textarea -->
+                <div class="flex-1">
+                  <textarea id="adminText" wire:model.defer="adminText" rows="1"
+                    placeholder="Escribe un mensaje… (Ctrl+Enter envía)"
+                    class="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    x-on:keydown.ctrl.enter="$wire.sendAdmin()"
+                    x-on:input="autosize($event.target)"></textarea>
+
+                  <!-- Previews de archivos -->
+                  <template x-if="$wire.uploads?.length">
+                    <div class="mt-2 flex flex-wrap gap-2">
+                      <template x-for="(f, i) in $wire.uploads" :key="i">
+                        <div class="border rounded-lg px-2 py-1 text-xs flex items-center gap-2
+                                    border-gray-200 dark:border-gray-700">
+                          <span x-text="f.name ?? 'archivo'"></span>
+                          <button type="button" class="text-red-600"
+                              x-on:click="$wire.uploads.splice(i,1)">
+                            ×
+                          </button>
+                        </div>
+                      </template>
                     </div>
-                </form>
+                  </template>
+
+                  <!-- Indicador audio -->
+                  <template x-if="recording">
+                    <div class="mt-2 text-xs text-amber-600 flex items-center gap-2">
+                      <span>● Grabando… <span x-text="timer"></span></span>
+                      <button type="button" class="underline"
+                              x-on:click="stopRecording()">Detener</button>
+                    </div>
+                  </template>
+
+                  <template x-if="audioBlobUrl && !recording">
+                    <div class="mt-2 flex items-center gap-2">
+                      <audio :src="audioBlobUrl" controls class="w-full"></audio>
+                      <button type="button" class="text-red-600 text-sm underline"
+                              x-on:click="clearAudio()">Quitar</button>
+                    </div>
+                  </template>
+                </div>
+
+                <!-- Botón mic -->
+                <button type="button"
+                        class="rounded-full p-3 border bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700"
+                        x-on:click="toggleRecording()"
+                        x-tooltip.raw="Mantén presionado o click para alternar grabación">
+                  🎙️
+                </button>
+
+                <!-- Enviar -->
+                <x-filament::button type="submit" icon="heroicon-o-paper-airplane" size="xl">
+                  Enviar
+                </x-filament::button>
+              </div>
+            </form>
             @endif
+
         </section>
 
         {{-- Columna derecha: Analytics & acciones rápidas --}}
@@ -291,24 +381,43 @@
                 @if ($metrics)
                     <dl class="grid grid-cols-2 gap-3 text-sm">
                         <div>
-                            <dt class="text-gray-500 dark:text-gray-400">CSAT (pred)</dt>
-                            <dd class="font-semibold">
+                            <dt class="text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                                CSAT (pred)
+                                <x-filament::icon icon="heroicon-o-question-mark-circle" class="w-4 h-4 cursor-help"
+                                    x-tooltip.raw="{{ $tips['csat'] }}" tabindex="0" />
+                            </dt>
+                            <dd class="font-semibold text-gray-950 dark:text-white">
                                 {{ isset($metrics->csat_pred) ? number_format($metrics->csat_pred * 100, 0) . '%' : '—' }}
                             </dd>
                         </div>
+
                         <div>
-                            <dt class="text-gray-500 dark:text-gray-400">Churn</dt>
-                            <dd class="font-semibold">
+                            <dt class="text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                                Churn
+                                <x-filament::icon icon="heroicon-o-question-mark-circle" class="w-4 h-4 cursor-help"
+                                    x-tooltip.raw="{{ $tips['churn'] }}" tabindex="0" />
+                            </dt>
+                            <dd class="font-semibold text-gray-950 dark:text-white">
                                 {{ isset($metrics->churn_risk) ? number_format($metrics->churn_risk * 100, 0) . '%' : '—' }}
                             </dd>
                         </div>
+
                         <div>
-                            <dt class="text-gray-500 dark:text-gray-400">FCR</dt>
-                            <dd class="font-semibold">{{ $metrics->fcr ? 'Sí' : 'No' }}</dd>
+                            <dt class="text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                                FCR
+                                <x-filament::icon icon="heroicon-o-question-mark-circle" class="w-4 h-4 cursor-help"
+                                    x-tooltip.raw="{{ $tips['fcr'] }}" tabindex="0" />
+                            </dt>
+                            <dd class="font-semibold text-gray-950 dark:text-white">{{ $metrics->fcr ? 'Sí' : 'No' }}</dd>
                         </div>
+
                         <div>
-                            <dt class="text-gray-500 dark:text-gray-400">AHT</dt>
-                            <dd class="font-semibold">
+                            <dt class="text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                                AHT
+                                <x-filament::icon icon="heroicon-o-question-mark-circle" class="w-4 h-4 cursor-help"
+                                    x-tooltip.raw="{{ $tips['aht'] }}" tabindex="0" />
+                            </dt>
+                            <dd class="font-semibold text-gray-950 dark:text-white">
                                 {{ $metrics->avg_response_time ? $metrics->avg_response_time . 's' : '—' }}
                             </dd>
                         </div>
@@ -316,7 +425,11 @@
 
                     @if (is_array($metrics->top_intents) && count($metrics->top_intents))
                         <div class="mt-3">
-                            <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">Top intents</div>
+                            <div class="text-xs text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-1">
+                                Top intents
+                                <x-filament::icon icon="heroicon-o-question-mark-circle" class="w-4 h-4 cursor-help"
+                                    x-tooltip.raw="{{ $tips['intents'] }}" tabindex="0" />
+                            </div>
                             <div class="flex flex-wrap gap-2">
                                 @foreach ($metrics->top_intents as $ti)
                                     <x-filament::badge color="gray">
@@ -383,6 +496,81 @@
 </x-filament::page>
 
 @push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+
+<script>
+  function autosize(el) {
+    el.style.height = 'auto';
+    el.style.height = (el.scrollHeight) + 'px';
+  }
+
+  function chatComposer() {
+    return {
+      mediaRecorder: null,
+      chunks: [],
+      recording: false,
+      timer: '00:00',
+      startedAt: null,
+      audioBlobUrl: null,
+      tickId: null,
+
+      toggleRecording() {
+        if (this.recording) { this.stopRecording(); }
+        else { this.startRecording(); }
+      },
+
+      async startRecording() {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          const mime = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/ogg';
+          this.mediaRecorder = new MediaRecorder(stream, { mimeType: mime });
+          this.chunks = [];
+          this.mediaRecorder.ondataavailable = (e) => { if (e.data.size) this.chunks.push(e.data); };
+          this.mediaRecorder.onstop = () => this.onStop();
+          this.mediaRecorder.start();
+
+          this.recording = true;
+          this.startedAt = Date.now();
+          this.tickId = setInterval(() => {
+            const s = Math.floor((Date.now() - this.startedAt) / 1000);
+            const mm = String(Math.floor(s/60)).padStart(2,'0');
+            const ss = String(s%60).padStart(2,'0');
+            this.timer = `${mm}:${ss}`;
+          }, 250);
+        } catch (e) {
+          window.dispatchEvent(new CustomEvent('filament-notify', {
+            detail: { status: 'danger', message: 'No se pudo acceder al micrófono' }
+          }));
+        }
+      },
+
+      stopRecording() {
+        if (!this.mediaRecorder) return;
+        this.mediaRecorder.stop();
+        this.recording = false;
+        clearInterval(this.tickId);
+        this.tickId = null;
+      },
+
+      clearAudio() {
+        this.audioBlobUrl = null;
+        this.chunks = [];
+        this.$wire.set('audioUpload', null);
+      },
+
+      async onStop() {
+        const blob = new Blob(this.chunks, { type: this.mediaRecorder.mimeType || 'audio/webm' });
+        this.audioBlobUrl = URL.createObjectURL(blob);
+
+        // Convierte a File para Livewire
+        const file = new File([blob], 'voice.webm', { type: blob.type });
+        // Subimos un único archivo “audioUpload”
+        this.$wire.upload('audioUpload', file);
+      },
+    }
+  }
+</script>
+
     <script data-navigate-once>
         window.decodeB64Utf8 = (b64) => {
             const bin = atob(b64);

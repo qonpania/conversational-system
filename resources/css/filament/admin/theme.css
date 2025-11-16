@@ -1,4 +1,126 @@
-@config 'tailwind.config.js';
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "../../app.css";
+
+/* ---------- BASE (afinación de tipografía y colores del panel) ---------- */
+@layer base {
+  :root {
+    /* Ajustes sutiles de contraste para dark/light */
+    --on-muted: 0.92;         /* opacidad para textos secundarios */
+    --on-card: 0.98;          /* legibilidad dentro de cards */
+  }
+
+  /* Texto secundario más legible dentro de secciones */
+  .fi-section, .fi-card {
+    color: rgb(17 24 39 / var(--on-card));
+  }
+}
+
+/* ---------- COMPONENTS (pequeños patrones reusables) ---------- */
+@layer components {
+  /* Tarjeta translúcida con blur consistente (como usas en secciones) */
+  .glass-card {
+    @apply rounded-2xl ring-1 ring-black/5 dark:ring-white/10 shadow-sm
+           bg-white/60 dark:bg-white/5 backdrop-blur-sm;
+  }
+
+  /* Botón redondeado consistente en panel */
+  .btn-soft {
+    @apply rounded-2xl shadow-sm hover:shadow transition-all;
+  }
+
+  /* Etiquetas compactas (para PII/Toxic/Abuse) */
+  .chip {
+    @apply text-[10px] px-1.5 py-0.5 rounded ring-1 ring-black/5 dark:ring-white/10;
+  }
+
+  /* Cabeceras sticky con degradado suave */
+  .sticky-soft {
+    @apply sticky top-0 z-10 -mt-2 -mx-1 mb-2 px-1 py-2
+           bg-gradient-to-b from-white/80 to-transparent dark:from-gray-900/80
+           backdrop-blur supports-[backdrop-filter]:backdrop-blur rounded-t-2xl;
+  }
+
+  /* Contenedor de chat con scrollbar fino y blur */
+  .chat-surface {
+    @apply rounded-2xl border border-gray-200/70 dark:border-white/10
+           bg-white/60 dark:bg-white/5 backdrop-blur-sm
+           p-4 sm:p-5 md:p-6 overflow-y-auto scroll-smooth
+           [scrollbar-width:thin] [scrollbar-color:theme(colors.gray.400)_transparent];
+  }
+
+  /* Scrollbar WebKit solo para .chat-surface */
+  .chat-surface::-webkit-scrollbar { height:10px; width:10px }
+  .chat-surface::-webkit-scrollbar-track { background: transparent }
+  .chat-surface::-webkit-scrollbar-thumb {
+    background: rgba(100,116,139,.35);
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+  .chat-surface:hover::-webkit-scrollbar-thumb { background: rgba(100,116,139,.6) }
+}
+
+/* ---------- UTILITIES (prioridad y !important donde hace falta) ---------- */
+@layer utilities {
+  /* Burbuja de mensaje: asegura curva grande y que ring/shadow sigan el radio */
+  .bubble {
+    border-radius: 1rem !important;       /* ~ rounded-2xl */
+    overflow: hidden;                     /* ring/imágenes respetan el radio */
+  }
+  .bubble-out {
+    border-bottom-right-radius: 0 !important; /* ~ rounded-br-none */
+  }
+  .bubble-in {
+    border-bottom-left-radius: 0 !important;  /* ~ rounded-bl-none */
+  }
+
+    .bubble-size {
+    max-width: 78% !important;   /* gana a cualquier max-w que ponga Filament */
+    width: max-content;          /* encoge a su contenido y respeta el max-width */
+    flex: 0 0 auto;              /* evita estirarse si el contenedor es flex */
+  }
+
+  /* (opcional) responsivo más fino para desktop anchos */
+  @media (min-width: 1280px) {
+    .bubble-size {
+      max-width: 65% !important;
+    }
+  }
+
+  /* Texto de mensaje consistente (tu 15px “real”) */
+  .msg-text {
+    font-size: 15px !important;
+    line-height: 1.6 !important;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Timestamp más claro y uniforme */
+  .msg-time {
+    font-size: 11px !important;
+    letter-spacing: .02em;
+    opacity: .7;
+  }
+
+  /* Microanimación para feedback “¡Copiado!” */
+  .pulse-once {
+    animation: pulse-once .9s ease-in-out 1;
+  }
+  @keyframes pulse-once {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.05); opacity: .9; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+}
+
+@layer components {
+  .bubble-shadow {
+    /* equivalente a shadow-md de Tailwind */
+    box-shadow:
+      0 4px 6px -1px rgb(0 0 0 / 0.1),
+      0 2px 4px -2px rgb(0 0 0 / 0.1) !important;
+  }
+
+.dark .bubble-shadow {
+    box-shadow: none !important;
+  }
+}

@@ -10,15 +10,14 @@ class Conversation extends Model
     use HasUuids;
     // protected $fillable = ['channel_id','contact_id','status','last_message_at','meta'];
     protected $casts = [
-        'last_message_at'     => 'immutable_datetime',
-        'summary_updated_at'  => 'immutable_datetime',
+        'last_message_at'     => 'datetime',
+        'summary_updated_at'  => 'datetime',
         'meta'                => 'array',
         'summary_meta'        => 'array',
-        'created_at'          => 'immutable_datetime',
-        'updated_at'          => 'immutable_datetime',
+        'created_at'          => 'datetime',
+        'updated_at'          => 'datetime',
         'handover_at'        => 'datetime',
         'resume_ai_at'      => 'datetime',
-        'recommendations_meta' => 'array',
         'recommendations_updated_at' => 'datetime',
     ];
 
