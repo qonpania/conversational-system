@@ -39,6 +39,31 @@ services:
       - qonpania_net  # red privada interna
       - rag_net
 
+  qonpania-queue:
+    image: qonpania-php:dev
+    container_name: qonpania-queue
+    restart: unless-stopped
+    working_dir: /var/www/qonpania
+    command: >
+      sh -c "
+        php artisan queue:work
+          --sleep=1
+          --tries=3
+          --max-time=3600
+      "
+    depends_on:
+      qonpania-db:
+        condition: service_healthy
+      qonpania-redis:
+        condition: service_started
+    volumes:
+      - ./:/var/www/qonpania          
+      - ./.env:/var/www/qonpania/.env:ro
+    networks:
+      - laravel_net
+      - qonpania_net
+      - rag_net
+
   qonpania-pg:
     image: postgres:16
     container_name: qonpania-pg
@@ -155,6 +180,6 @@ networks:
     external: true
   qonpania_net:
     name: qonpania_net
-    driver: bridge  
+    driver: bridge
   rag_net:
     external: true
