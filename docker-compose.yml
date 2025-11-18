@@ -37,6 +37,7 @@ services:
     networks:
       - laravel_net       # para que lo alcance tu Nginx reverse proxy
       - qonpania_net  # red privada interna
+      - rag_net
 
   qonpania-pg:
     image: postgres:16
@@ -151,7 +152,9 @@ volumes:
 
 networks:
   laravel_net:
-    external: true   # ya existe en tu host (lo usa tu Nginx)
+    external: true
   qonpania_net:
     name: qonpania_net
-    driver: bridge   # red privada del proyecto
+    driver: bridge  
+  rag_net:
+    external: true

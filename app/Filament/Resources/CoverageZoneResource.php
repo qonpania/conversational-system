@@ -75,11 +75,16 @@ class CoverageZoneResource extends Resource
                     ->label('Score')
                     ->sortable()
                     ->colors([
-                        'success' => fn ($value) => $value >= 2,
-                        'warning' => fn ($value) => $value < 2 && $value >= 1,
-                        'danger'  => fn ($value) => $value < 1,
+                        'success' => fn ($state): bool => $state >= 2,
+                        'warning' => fn ($state): bool => $state < 2 && $state >= 1,
+                        'danger'  => fn ($state): bool => $state < 1,
                     ])
-                    ->formatStateUsing(fn ($value) => $value !== null ? number_format($value, 2) : '-'),
+                    ->formatStateUsing(
+                        fn ($state) => $state !== null
+                            ? number_format($state, 2)
+                            : '-'
+                    ),
+
             ])
             ->defaultSort('distrito')
             ->filters([])
@@ -98,6 +103,7 @@ class CoverageZoneResource extends Resource
             'index' => Pages\ListCoverageZones::route('/'),
             'create' => Pages\CreateCoverageZone::route('/create'),
             'edit' => Pages\EditCoverageZone::route('/{record}/edit'),
+            'view' => Pages\ViewCoverageZone::route('/{record}'),
         ];
     }
 }
