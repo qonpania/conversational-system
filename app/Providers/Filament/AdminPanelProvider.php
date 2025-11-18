@@ -25,6 +25,7 @@ use Rmsramos\Activitylog\ActivitylogPlugin;
 use ShuvroRoy\FilamentSpatieLaravelBackup\FilamentSpatieLaravelBackupPlugin;
 use App\Filament\Pages\Backups;
 use ShuvroRoy\FilamentSpatieLaravelHealth\FilamentSpatieLaravelHealthPlugin;
+use \Croustibat\FilamentJobsMonitor\FilamentJobsMonitorPlugin;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -114,6 +115,8 @@ class AdminPanelProvider extends PanelProvider
                     ->authorize(function (): bool {
                         return auth()->user()->hasAnyRole(['super_admin']);
                     }),
+
+                FilamentJobsMonitorPlugin::make(),
 
 
                 ]);
