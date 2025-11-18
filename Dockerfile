@@ -24,6 +24,9 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 ENV COMPOSER_ALLOW_SUPERUSER=1
 
+# Config PHP extra
+COPY php.ini /usr/local/etc/php/conf.d/custom.ini
+
 WORKDIR /var/www/qonpania
 EXPOSE 9000
 CMD ["php-fpm"]
