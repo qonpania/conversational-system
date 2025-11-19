@@ -2,14 +2,28 @@
 
 namespace App\Services;
 
+use App\Models\CoverageDepartment;
+use App\Models\CoverageDistrict;
+use App\Models\CoverageProvince;
 use App\Models\CoverageZone;
 
 class CoverageService
 {
-    public function checkCoverage(float $lat, float $lng): ?CoverageZone
+    public function checkCoverage(
+        float $lat,
+        float $lng,
+        ?CoverageDepartment $department = null,
+        ?CoverageProvince $province = null,
+        ?CoverageDistrict $district = null,
+    ): ?CoverageZone
     {
         // 1) Buscar zonas candidatas (si luego quieres optimizar puedes usar un bounding box simple)
-        $zones = CoverageZone::all(); // luego lo optimizamos si hace falta
+        $zones = CoverageZone::query()
+            ->with(['department', 'province', 'district'])
+            ->when($department, fn ($query) => $query->where('coverage_department_id', $department->id))
+            ->when($province, fn ($query) => $query->where('coverage_province_id', $province->id))
+            ->when($district, fn ($query) => $query->where('coverage_district_id', $district->id))
+            ->get(); // luego lo optimizamos si hace falta
 
         foreach ($zones as $zone) {
             $polygon = $zone->polygon ?? [];

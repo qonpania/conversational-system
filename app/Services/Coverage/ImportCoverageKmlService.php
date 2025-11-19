@@ -2,8 +2,12 @@
 
 namespace App\Services\Coverage;
 
+use App\Models\CoverageDepartment;
+use App\Models\CoverageDistrict;
+use App\Models\CoverageProvince;
 use App\Models\CoverageZone;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use SimpleXMLElement;
 
 class ImportCoverageKmlService
@@ -29,6 +33,9 @@ class ImportCoverageKmlService
         // Si quieres empezar “limpio”, borras todo
         if ($replaceExisting) {
             CoverageZone::truncate();
+            CoverageDistrict::truncate();
+            CoverageProvince::truncate();
+            CoverageDepartment::truncate();
         }
 
         $content = file_get_contents($absolutePath);
@@ -97,9 +104,10 @@ class ImportCoverageKmlService
         $provincia    = $metadata['PROVINCIA'] ?? null;
         $distrito     = $metadata['DISTRITO'] ?? null;
         $score        = isset($metadata['Puntaje']) ? (float) $metadata['Puntaje'] : null;
+        $locations    = $this->resolveLocationHierarchy($departamento, $provincia, $distrito);
 
-        if ($distrito) {
-            $districtsSet[$distrito] = true;
+        if ($locations['district']) {
+            $districtsSet[$locations['district']->id] = true;
         }
 
         // Nombre “amigable” de la zona
@@ -121,9 +129,9 @@ class ImportCoverageKmlService
 
                 CoverageZone::create([
                     'name'         => $name,
-                    'departamento' => $departamento,
-                    'provincia'    => $provincia,
-                    'distrito'     => $distrito,
+                    'coverage_department_id' => $locations['department']?->id,
+                    'coverage_province_id'   => $locations['province']?->id,
+                    'coverage_district_id'   => $locations['district']?->id,
                     'score'        => $score,
                     'polygon'      => $points,   // se castea a JSON
                     'metadata'     => $metadata, // todo el ExtendedData crudo
@@ -138,9 +146,9 @@ class ImportCoverageKmlService
             if (! empty($points)) {
                 CoverageZone::create([
                     'name'         => $name,
-                    'departamento' => $departamento,
-                    'provincia'    => $provincia,
-                    'distrito'     => $distrito,
+                    'coverage_department_id' => $locations['department']?->id,
+                    'coverage_province_id'   => $locations['province']?->id,
+                    'coverage_district_id'   => $locations['district']?->id,
                     'score'        => $score,
                     'polygon'      => $points,
                     'metadata'     => $metadata,
@@ -228,5 +236,106 @@ class ImportCoverageKmlService
         }
 
         return $points;
+    }
+
+    /**
+     * Normaliza y crea/recupera la jerarquía de ubicación.
+     *
+     * @return array{
+     *     department: CoverageDepartment|null,
+     *     province: CoverageProvince|null,
+     *     district: CoverageDistrict|null,
+     * }
+     */
+    protected function resolveLocationHierarchy(?string $departmentName, ?string $provinceName, ?string $districtName): array
+    {
+        $department = $this->findOrCreateDepartment($departmentName);
+        $province   = $this->findOrCreateProvince($provinceName, $department);
+        $district   = $this->findOrCreateDistrict($districtName, $department, $province);
+
+        return [
+            'department' => $department,
+            'province'   => $province,
+            'district'   => $district,
+        ];
+    }
+
+    protected function findOrCreateDepartment(?string $name): ?CoverageDepartment
+    {
+        $normalized = $this->normalizeLocationName($name);
+
+        if (! $normalized) {
+            return null;
+        }
+
+        return CoverageDepartment::firstOrCreate(
+            ['slug' => $normalized['slug']],
+            ['name' => $normalized['name']],
+        );
+    }
+
+    protected function findOrCreateProvince(?string $name, ?CoverageDepartment $department): ?CoverageProvince
+    {
+        $normalized = $this->normalizeLocationName($name);
+
+        if (! $normalized) {
+            return null;
+        }
+
+        return CoverageProvince::firstOrCreate(
+            [
+                'slug'                   => $normalized['slug'],
+                'coverage_department_id' => $department?->id,
+            ],
+            [
+                'name' => $normalized['name'],
+            ],
+        );
+    }
+
+    protected function findOrCreateDistrict(
+        ?string $name,
+        ?CoverageDepartment $department,
+        ?CoverageProvince $province,
+    ): ?CoverageDistrict {
+        $normalized = $this->normalizeLocationName($name);
+
+        if (! $normalized) {
+            return null;
+        }
+
+        return CoverageDistrict::firstOrCreate(
+            [
+                'slug'                   => $normalized['slug'],
+                'coverage_department_id' => $department?->id,
+                'coverage_province_id'   => $province?->id,
+            ],
+            [
+                'name' => $normalized['name'],
+            ],
+        );
+    }
+
+    /**
+     * @return array{name: string, slug: string}|null
+     */
+    protected function normalizeLocationName(?string $value): ?array
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $name = trim($value);
+
+        if ($name === '') {
+            return null;
+        }
+
+        $slug = Str::slug($name);
+
+        return [
+            'name' => $name,
+            'slug' => $slug !== '' ? $slug : md5(strtolower($name)),
+        ];
     }
 }

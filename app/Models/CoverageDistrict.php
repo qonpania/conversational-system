@@ -5,25 +5,17 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class CoverageZone extends Model
+class CoverageDistrict extends Model
 {
     use HasFactory;
 
     protected $fillable = [
-        'name',
         'coverage_department_id',
         'coverage_province_id',
-        'coverage_district_id',
-        'score',
-        'polygon',
-        'metadata',
-    ];
-
-    protected $casts = [
-        'polygon' => 'array',
-        'metadata' => 'array',
-        'score'   => 'float',
+        'name',
+        'slug',
     ];
 
     public function department(): BelongsTo
@@ -36,8 +28,8 @@ class CoverageZone extends Model
         return $this->belongsTo(CoverageProvince::class, 'coverage_province_id');
     }
 
-    public function district(): BelongsTo
+    public function zones(): HasMany
     {
-        return $this->belongsTo(CoverageDistrict::class, 'coverage_district_id');
+        return $this->hasMany(CoverageZone::class, 'coverage_district_id');
     }
 }

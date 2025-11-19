@@ -39,3 +39,4 @@ Route::post('/conversations/{id}/metrics',  [ConversationMetricsController::clas
 Route::post('/conversations/{conversation}/recommendations', [ConversationRecommendationController::class, 'store']);
 
 Route::post('/coverage/check', [CoverageController::class, 'check']);
+Route::get('/coverage/locations', [CoverageController::class, 'locations']);

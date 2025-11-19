@@ -3,9 +3,14 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\CoverageZoneResource\Pages;
+use App\Models\CoverageDepartment;
+use App\Models\CoverageDistrict;
+use App\Models\CoverageProvince;
 use App\Models\CoverageZone;
 use Filament\Forms;
 use Filament\Forms\Form;      // 👈 IMPORTE CORRECTO
+use Filament\Forms\Get;
+use Filament\Forms\Set;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;    // 👈 IMPORTE CORRECTO
@@ -30,9 +35,44 @@ class CoverageZoneResource extends Resource
                             ->label('Nombre')
                             ->required(),
 
-                        Forms\Components\TextInput::make('departamento'),
-                        Forms\Components\TextInput::make('provincia'),
-                        Forms\Components\TextInput::make('distrito'),
+                        Forms\Components\Select::make('coverage_department_id')
+                            ->label('Departamento')
+                            ->options(fn () => CoverageDepartment::query()
+                                ->orderBy('name')
+                                ->pluck('name', 'id')
+                                ->all()
+                            )
+                            ->searchable()
+                            ->reactive()
+                            ->afterStateUpdated(fn (Set $set) => $set('coverage_province_id', null)),
+
+                        Forms\Components\Select::make('coverage_province_id')
+                            ->label('Provincia')
+                            ->options(fn (Get $get) => CoverageProvince::query()
+                                ->when(
+                                    $get('coverage_department_id'),
+                                    fn ($query, $departmentId) => $query->where('coverage_department_id', $departmentId)
+                                )
+                                ->orderBy('name')
+                                ->pluck('name', 'id')
+                                ->all()
+                            )
+                            ->searchable()
+                            ->reactive()
+                            ->afterStateUpdated(fn (Set $set) => $set('coverage_district_id', null)),
+
+                        Forms\Components\Select::make('coverage_district_id')
+                            ->label('Distrito')
+                            ->options(fn (Get $get) => CoverageDistrict::query()
+                                ->when(
+                                    $get('coverage_province_id'),
+                                    fn ($query, $provinceId) => $query->where('coverage_province_id', $provinceId)
+                                )
+                                ->orderBy('name')
+                                ->pluck('name', 'id')
+                                ->all()
+                            )
+                            ->searchable(),
 
                         Forms\Components\TextInput::make('score')
                             ->numeric()
@@ -55,19 +95,16 @@ class CoverageZoneResource extends Resource
                     ->label('Zona')
                     ->searchable()
                     ->sortable()
-                    ->description(fn (CoverageZone $record) => $record->distrito),
+                    ->description(fn (CoverageZone $record) => $record->district?->name),
 
-                Tables\Columns\BadgeColumn::make('departamento')
+                Tables\Columns\BadgeColumn::make('department.name')
                     ->colors(['primary'])
-                    ->sortable()
                     ->toggleable(),
 
-                Tables\Columns\TextColumn::make('provincia')
-                    ->sortable()
+                Tables\Columns\TextColumn::make('province.name')
                     ->toggleable(),
 
-                Tables\Columns\TextColumn::make('distrito')
-                    ->sortable()
+                Tables\Columns\TextColumn::make('district.name')
                     ->searchable()
                     ->toggleable(),
 
@@ -86,7 +123,7 @@ class CoverageZoneResource extends Resource
                     ),
 
             ])
-            ->defaultSort('distrito')
+            ->defaultSort('name')
             ->filters([])
             ->actions([
                 Tables\Actions\ViewAction::make(),
