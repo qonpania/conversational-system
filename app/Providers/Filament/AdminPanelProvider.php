@@ -116,7 +116,7 @@ class AdminPanelProvider extends PanelProvider
                         return auth()->user()->hasAnyRole(['super_admin']);
                     }),
 
-                FilamentJobsMonitorPlugin::make(),
+                FilamentJobsMonitorPlugin::make()
 
 
                 ]);

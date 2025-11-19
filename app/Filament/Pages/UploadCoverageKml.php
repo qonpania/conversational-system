@@ -104,45 +104,37 @@ class UploadCoverageKml extends Page
         // Ruta relativa en el disco configurado en el FileUpload
         $relativePath = $data['kml_file'];
 
-        // Path absoluto en el servidor
-        $absolutePath = Storage::disk('local')->path($relativePath);
+        // Disco usado (coincide con el FileUpload)
+        $disk = 'local'; // o el que tengas en FileUpload::make('kml_file')->disk(...)
 
-        try {
-            /** @var ImportCoverageKmlService $service */
-            $service = app(ImportCoverageKmlService::class);
+        // Path absoluto solo para validar que existe
+        $absolutePath = Storage::disk($disk)->path($relativePath);
 
-            $result = $service->handle(
-                absolutePath: $absolutePath,
-                replaceExisting: (bool) ($data['replace_existing'] ?? false),
-                notes: $data['notes'] ?? null,
-            );
-
-            $this->lastImportSummary = is_array($result) ? $result : null;
-
-            $zones    = $result['zones'] ?? null;
-            $polygons = $result['polygons'] ?? null;
-
+        if (! file_exists($absolutePath)) {
             Notification::make()
-                ->title('KML importado correctamente')
-                ->body(
-                    'Se procesó el archivo de cobertura.' .
-                    ($zones !== null && $polygons !== null
-                        ? " Zonas: {$zones}, polígonos: {$polygons}."
-                        : ''
-                    )
-                )
-                ->success()
-                ->send();
-
-        } catch (\Throwable $e) {
-            report($e);
-
-            Notification::make()
-                ->title('Error al procesar el archivo KML')
-                ->body('Revisa el log para más detalles. Si el problema persiste, contacta con soporte.')
+                ->title('No se encontró el archivo KML en el servidor.')
                 ->danger()
                 ->send();
+
+            return;
         }
+
+        // Encolar el job en la cola "default"
+        ProcessCoverageKmlJob::dispatch(
+            relativePath: $relativePath,
+            replaceExisting: (bool) ($data['replace_existing'] ?? false),
+            notes: $data['notes'] ?? null,
+            userId: auth()->id(),
+        )->onQueue('default'); // opcional, si quieres ser explícito
+
+        // Como es asíncrono, ya no podemos mostrar el resumen aquí
+        $this->lastImportSummary = null;
+
+        Notification::make()
+            ->title('Importación encolada')
+            ->body('El archivo KML se está procesando en segundo plano. Podrás ver las zonas de cobertura cuando termine el job.')
+            ->success()
+            ->send();
     }
 
     /**
