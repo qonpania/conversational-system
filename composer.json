@@ -13,6 +13,8 @@
         "filament/filament": "^3.3",
         "filament/spatie-laravel-media-library-plugin": "^3.2",
         "gboquizosanchez/filament-log-viewer": "^1.2",
+        "gemini-api-php/client": "^1.7",
+        "google/apiclient": "^2.18",
         "jeffgreco13/filament-breezy": "^2.6",
         "joshembling/image-optimizer": "^1.6",
         "laravel/framework": "^12.0",

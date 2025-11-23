@@ -46,5 +46,9 @@ return [
         'recommendations_webhook' => env('N8N_RECOMMENDATIONS_WEBHOOK'),
     ],
 
+    'google' => [
+        'api_key' => env('GOOGLE_API_KEY'),
+    ],
+
 
 ];

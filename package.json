@@ -19,7 +19,10 @@
         "vite": "^7.0.4"
     },
     "dependencies": {
+        "@google/generative-ai": "^0.24.1",
+        "dotenv": "^17.2.3",
         "laravel-echo": "^2.2.4",
-        "pusher-js": "^8.4.0"
+        "pusher-js": "^8.4.0",
+        "ws": "^8.18.3"
     }
 }
