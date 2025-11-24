@@ -40,3 +40,5 @@ Route::post('/conversations/{conversation}/recommendations', [ConversationRecomm
 
 Route::post('/coverage/check', [CoverageController::class, 'check']);
 Route::get('/coverage/locations', [CoverageController::class, 'locations']);
+
+Route::post('/twilio/voice', [App\Http\Controllers\TwilioController::class, 'voice']);

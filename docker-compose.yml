@@ -187,6 +187,23 @@ services:
       - laravel_net
       - qonpania_net
 
+  twilio-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.twilio
+    container_name: qonpania-twilio-server
+    restart: unless-stopped
+    ports:
+      - "8082:8082"
+    environment:
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - PORT=8082
+    volumes:
+      - ./.env:/app/.env:ro
+    networks:
+      - laravel_net
+      - qonpania_net
+
 
 volumes:
   qonpania_pg_data:
