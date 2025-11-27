@@ -200,6 +200,7 @@ services:
       - PORT=8082
     volumes:
       - ./.env:/app/.env:ro
+      - ./twilio-server.js:/app/twilio-server.js
     networks:
       - laravel_net
       - qonpania_net
