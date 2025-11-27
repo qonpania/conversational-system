@@ -27,7 +27,8 @@
         "shuvroroy/filament-spatie-laravel-backup": "^2.2",
         "shuvroroy/filament-spatie-laravel-health": "^2.3",
         "stechstudio/filament-impersonate": "^3.16",
-        "tomatophp/filament-users": "^2.0"
+        "tomatophp/filament-users": "^2.0",
+        "twilio/sdk": "^8.8"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

@@ -9,6 +9,7 @@ class HttpEmbedder implements Embedder {
     $res = Http::timeout(120)
       ->post(rtrim(config('services.embedder.base_url'),'/').'/embed', [
         'texts' => array_values($chunks),
+        'dimensions' => 512,
       ])->throw()->json();
     return $res['vectors'] ?? [];
   }

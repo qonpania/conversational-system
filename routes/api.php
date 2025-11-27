@@ -42,3 +42,4 @@ Route::post('/coverage/check', [CoverageController::class, 'check']);
 Route::get('/coverage/locations', [CoverageController::class, 'locations']);
 
 Route::post('/twilio/voice', [App\Http\Controllers\TwilioController::class, 'voice']);
+Route::post('/twilio/call-status', [App\Http\Controllers\Api\TwilioCallStatusController::class, 'store']);
