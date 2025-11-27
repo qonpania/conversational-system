@@ -212,7 +212,7 @@
         const twiml = `<?xml version="1.0" encoding="UTF-8"?>
         <Response>
             <Start>
-                <Recording recordingStatusCallback="${callbackUrl}" recordingStatusCallbackEvent="completed" recordingChannels="dual" />
+                <Recording recordingStatusCallback="${callbackUrl}" recordingStatusCallbackEvent="completed" />
             </Start>
             <Connect>
                 <Stream url="wss://${host}/media-stream">
